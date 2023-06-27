@@ -6,10 +6,10 @@ ODIR := ./obj
 SDIR := ./src
 IDIR := ./inc
 
-_DEPS := arg_parser.h
+_DEPS := arg_parser.h x.h
 DEPS := $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ := main.o arg_parser.o
+_OBJ := main.o arg_parser.o x.o
 OBJ := $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
