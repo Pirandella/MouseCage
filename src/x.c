@@ -18,6 +18,16 @@ void x_init()
     puts("Succsess!");
 }
 
+static void print_window_info()
+{
+    int x, y;
+    Window child;
+    XWindowAttributes xwa;
+    XTranslateCoordinates(display, selected_window, root_window, 0, 0, &x, &y, &child);
+    XGetWindowAttributes(display, selected_window, &xwa);
+    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", x, y, xwa.width, xwa.height);
+}
+
 static bool match_window_name(Display *_display, Window _window, char *app_name)
 {
     XTextProperty text_data;
@@ -38,7 +48,7 @@ static Window get_window_id_by_name(Window root, char *app_name, uint32_t depth)
     static Window ret = 0;
 
     Status status = XQueryTree(display, root, &root, &parent, &children, &count);
-    if(!status) {
+    if (!status) {
         puts("Failed to retrive windows tree\n");
         return ret;
     }
@@ -52,7 +62,7 @@ static Window get_window_id_by_name(Window root, char *app_name, uint32_t depth)
     return ret;   
 }
 
-void x_window_name(char *name)
+void x_select_window_by_name(char *name)
 {
     selected_window = get_window_id_by_name(root_window, name, 0);
     if (selected_window == 0) {
@@ -60,4 +70,28 @@ void x_window_name(char *name)
         exit(-1);
     }
     printf("Window:\n\tID:   0x%08lX\n\tName: %s\n", selected_window, name);
+
+    print_window_info();
+}
+
+void x_select_window_under_cursor()
+{
+    Cursor cursor = XCreateFontCursor(display, XC_crosshair);
+
+    XGrabPointer(display, root_window, 0, (ButtonMotionMask | ButtonPressMask | ButtonReleaseMask),
+                 GrabModeAsync, GrabModeAsync, root_window, cursor, CurrentTime);
+    XEvent e;
+    while (1) {
+        XNextEvent(display, &e);
+        if (e.type == ButtonRelease) {
+            selected_window = e.xbutton.subwindow;
+            break;
+        }
+    }
+
+    XUngrabPointer(display, CurrentTime);
+    XFreeCursor(display, cursor);
+
+    puts("Window selected!");
+    print_window_info();
 }

@@ -13,9 +13,11 @@
 #include <X11/Xutil.h>
 #include <X11/Xatom.h>
 #include <X11/Xmu/WinUtil.h>
+#include <X11/cursorfont.h>
 
 void x_init();
 
-void x_window_name(char *name);
+void x_select_window_by_name(char *name);
+void x_select_window_under_cursor();
 
 #endif  /* _X_H_ */
