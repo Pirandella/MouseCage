@@ -91,8 +91,25 @@ static Window get_window_id_by_name(Window root, char *app_name, uint32_t depth)
         if (ret != 0) break;
     }
 
-    return ret;   
+    return ret;
 }
+
+static void list_window_properties()
+{
+    int prop_num = 0;
+    Atom *list = XListProperties(display, selected_window, &prop_num);
+    if (prop_num == 0) {
+        printf("No properties found for this window 0x%08lX\n", selected_window);
+        return;
+    }
+
+    puts("Available properties:");
+    for (int i = 0; i < prop_num; i++) {
+        printf("\t%s\n", XGetAtomName(display, list[i]));
+    }
+}
+
+/* --------------------------------------------------------------------------------------- */
 
 void x_set_area(int x1, int y1, int x2, int y2)
 {
