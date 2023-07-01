@@ -3,13 +3,15 @@
 static Display *display;
 static Window root_window;
 static Window selected_window;
-static uint32_t app_flags = 0;
+static uint32_t x_flags = 0;
 
-#define APP_BY_NAME    (1U << 1U)
+#define X_AREA          (1U << 0U)
+#define X_BY_NAME       (1U << 1U)
+#define X_UNDER_CURSOR  (1U << 2U)
 
-static int wx, wy, ww, wh;
+static int wx1, wy1, ww, wh, wx2, wy2;
 
-void x_init(uint32_t flags)
+void x_init()
 {
     setlocale(LC_ALL, "");
 
@@ -21,21 +23,19 @@ void x_init(uint32_t flags)
     }
     root_window = DefaultRootWindow(display);
     puts("Succsess!");
-
-    app_flags = flags;
 }
 
 static void get_selected_window_size()
 {
     Window child;
     XWindowAttributes xwa;
-    XTranslateCoordinates(display, selected_window, root_window, 0, 0, &wx, &wy, &child);
+    XTranslateCoordinates(display, selected_window, root_window, 0, 0, &wx1, &wy1, &child);
     XGetWindowAttributes(display, selected_window, &xwa);
     ww = xwa.width;
     wh = xwa.height;
 
     // For some reason window title bar height is not acounted for windows that was retrived by name.
-    if (app_flags & APP_BY_NAME) {
+    if (x_flags & X_BY_NAME) {
         int top = 0;
         Atom prop = XInternAtom(display, "_NET_FRAME_EXTENTS", False);
         Atom type;
@@ -49,7 +49,7 @@ static void get_selected_window_size()
             }
             XFree(property);
         }
-        wy -= top;
+        wy1 -= top;
         wh += top;
     }
 }
@@ -57,7 +57,7 @@ static void get_selected_window_size()
 static void print_window_info()
 {
     get_selected_window_size();
-    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", wx, wy, ww, wh);
+    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", wx1, wy1, ww, wh);
 }
 
 static bool match_window_name(Display *_display, Window _window, char *app_name)
@@ -94,8 +94,26 @@ static Window get_window_id_by_name(Window root, char *app_name, uint32_t depth)
     return ret;   
 }
 
+void x_set_area(int x1, int y1, int x2, int y2)
+{
+    if (x1 > x2 || y1 > y2) {
+        printf("Error: x1 and y1 should be less than x2 and y2!\n");
+        exit(-1);
+    }
+
+    x_flags = X_AREA;
+
+    wx1 = x1;
+    wy1 = y1;
+    wx2 = x2;
+    wy2 = y2;
+
+    printf("Cage area:\n\tX1: %4d\tY1: %4d\n\tX2: %4d\tY2: %4d\n", wx1, wy1, wx2, wy2);
+}
+
 void x_select_window_by_name(char *name)
 {
+    x_flags = X_BY_NAME;
     selected_window = get_window_id_by_name(root_window, name, 0);
     if (selected_window == 0) {
         printf("No window with this name \"%s\" exists!\n", name);
@@ -108,6 +126,7 @@ void x_select_window_by_name(char *name)
 
 void x_select_window_under_cursor()
 {
+    x_flags = X_UNDER_CURSOR;
     Cursor cursor = XCreateFontCursor(display, XC_crosshair);
 
     XGrabPointer(display, root_window, 0, (ButtonMotionMask | ButtonPressMask | ButtonReleaseMask),
