@@ -1,6 +1,6 @@
 CC := gcc
 TARGET := mousecage
-CFLAGS = -std=c11 -I $(IDIR) -Wall -O1 -g3 -lX11 -lXtst -lXext `pkg-config --cflags xmu` `pkg-config --libs xmu`
+CFLAGS = -std=c11 -I $(IDIR) -Wall -O1 -g3 -lX11 -lXtst -lXext `pkg-config --cflags xmu` `pkg-config --libs xmu` -D _DEFAULT_SOURCE
 
 ODIR := ./obj
 SDIR := ./src

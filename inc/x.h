@@ -15,9 +15,10 @@
 #include <X11/Xmu/WinUtil.h>
 #include <X11/cursorfont.h>
 
-void x_init();
+void x_init(uint32_t flags);
 
 void x_select_window_by_name(char *name);
 void x_select_window_under_cursor();
+void x_live_cursor_position();
 
 #endif  /* _X_H_ */

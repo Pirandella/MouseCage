@@ -3,8 +3,13 @@
 static Display *display;
 static Window root_window;
 static Window selected_window;
+static uint32_t app_flags = 0;
 
-void x_init()
+#define APP_BY_NAME    (1U << 1U)
+
+static int wx, wy, ww, wh;
+
+void x_init(uint32_t flags)
 {
     setlocale(LC_ALL, "");
 
@@ -16,16 +21,43 @@ void x_init()
     }
     root_window = DefaultRootWindow(display);
     puts("Succsess!");
+
+    app_flags = flags;
+}
+
+static void get_selected_window_size()
+{
+    Window child;
+    XWindowAttributes xwa;
+    XTranslateCoordinates(display, selected_window, root_window, 0, 0, &wx, &wy, &child);
+    XGetWindowAttributes(display, selected_window, &xwa);
+    ww = xwa.width;
+    wh = xwa.height;
+
+    // For some reason window title bar height is not acounted for windows that was retrived by name.
+    if (app_flags & APP_BY_NAME) {
+        int top = 0;
+        Atom prop = XInternAtom(display, "_NET_FRAME_EXTENTS", False);
+        Atom type;
+        int format;
+        unsigned long nitems, bytes_after;
+        unsigned char *property;
+        if (XGetWindowProperty(display, selected_window, prop, 0, 16, 0, XA_CARDINAL,
+                            &type, &format, &nitems, &bytes_after, &property) == Success) {
+            if (type != None && nitems == 4) {
+                top = (int)((long *)property)[2];
+            }
+            XFree(property);
+        }
+        wy -= top;
+        wh += top;
+    }
 }
 
 static void print_window_info()
 {
-    int x, y;
-    Window child;
-    XWindowAttributes xwa;
-    XTranslateCoordinates(display, selected_window, root_window, 0, 0, &x, &y, &child);
-    XGetWindowAttributes(display, selected_window, &xwa);
-    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", x, y, xwa.width, xwa.height);
+    get_selected_window_size();
+    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", wx, wy, ww, wh);
 }
 
 static bool match_window_name(Display *_display, Window _window, char *app_name)
@@ -94,4 +126,17 @@ void x_select_window_under_cursor()
 
     puts("Window selected!");
     print_window_info();
+}
+
+void x_live_cursor_position()
+{
+    int win_x, win_y;
+    int x, y;
+    unsigned int mask;
+    Window child;
+    while (1) {
+        XQueryPointer(display, root_window, &root_window, &child, &x, &y, &win_x, &win_y, &mask);
+        printf("\tX: %4d\tY: %4d\r", x, y);
+        usleep(1000);
+    }
 }
