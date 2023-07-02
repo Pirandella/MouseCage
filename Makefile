@@ -18,7 +18,5 @@ $(ODIR)/%.o: $(SDIR)/%.c $(DEPS)
 $(TARGET): $(OBJ)
 	$(CC) -o $(TARGET) $^ $(CFLAGS)
 
-.PHONY: clean
-
 clean:
 	rm -f $(ODIR)/*.o $(TARGET)

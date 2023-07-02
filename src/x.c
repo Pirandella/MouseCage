@@ -10,6 +10,7 @@ static uint32_t x_flags = 0;
 #define X_UNDER_CURSOR  (1U << 2U)
 
 static int wx1, wy1, ww, wh, wx2, wy2;
+static int dw, dh;
 
 void x_init()
 {
@@ -22,7 +23,9 @@ void x_init()
         exit (-1);
     }
     root_window = DefaultRootWindow(display);
-    puts("Succsess!");
+    dw = DisplayWidth(display, 0);
+    dh = DisplayHeight(display, 0);
+    printf("Succsess!\nDisplay dimentions:\n\tW: %4d\tH: %4d\n", dw, dh);
 }
 
 static void get_selected_window_size()
@@ -57,7 +60,7 @@ static void get_selected_window_size()
 static void print_window_info()
 {
     get_selected_window_size();
-    printf("X: %4d\tY: %4d\nW: %4d\tH: %4d\n", wx1, wy1, ww, wh);
+    printf("\tX: %4d\tY: %4d\n\tW: %4d\tH: %4d\n", wx1, wy1, ww, wh);
 }
 
 static bool match_window_name(Display *_display, Window _window, char *app_name)
@@ -67,8 +70,12 @@ static bool match_window_name(Display *_display, Window _window, char *app_name)
     XGetTextProperty(_display, _window, &text_data, atom);
     char *window_name = (char *)text_data.value;
     if (text_data.nitems != 0)
-        if (!strcmp(app_name, window_name)) return true;
+        if (!strcmp(app_name, window_name)) {
+            XFree(window_name);
+            return true;
+        }
 
+    XFree(window_name);
     return false;
 }
 
@@ -91,6 +98,8 @@ static Window get_window_id_by_name(Window root, char *app_name, uint32_t depth)
         if (ret != 0) break;
     }
 
+    XFree(children);
+    children = NULL;
     return ret;
 }
 
@@ -143,6 +152,7 @@ void x_select_window_by_name(char *name)
 
 void x_select_window_under_cursor()
 {
+    puts("Waiting for window selction...");
     x_flags = X_UNDER_CURSOR;
     Cursor cursor = XCreateFontCursor(display, XC_crosshair);
 
@@ -160,12 +170,13 @@ void x_select_window_under_cursor()
     XUngrabPointer(display, CurrentTime);
     XFreeCursor(display, cursor);
 
-    puts("Window selected!");
+    puts("Window dimentions:");
     print_window_info();
 }
 
 void x_live_cursor_position()
 {
+    puts("Current cursor position:");
     int win_x, win_y;
     int x, y;
     unsigned int mask;
@@ -175,4 +186,46 @@ void x_live_cursor_position()
         printf("\tX: %4d\tY: %4d\r", x, y);
         usleep(1000);
     }
+}
+
+void x_track_cursor()
+{
+    if ((x_flags & X_BY_NAME) || (x_flags & X_UNDER_CURSOR)) {
+        wx2 = wx1 + ww;
+        wy2 = wy1 + wh;
+    }
+    bool out_of_bounds = false;
+    Window root;
+    Window child;
+    int cx, cy, wx, wy;
+    unsigned int mask;
+
+    while (1) {
+        // Get current cursor positon
+        XQueryPointer(display, root_window, &root, &child, &cx, &cy, &wx, &wy, &mask);
+        
+        if (cx < wx1) { 	
+            cx = wx1;
+            out_of_bounds = true;
+        } else if (cx > wx2) {
+            cx = wx2;
+            out_of_bounds = true;
+        } else if (cy < wy1) {
+            cy = wy1;
+            out_of_bounds = true;
+        } else if (cy > wy2) {
+            cy = wy2;
+            out_of_bounds = true;
+        }
+                
+        if (out_of_bounds == true) XTestFakeMotionEvent(display, 0, cx, cy, CurrentTime);
+        out_of_bounds = false;
+
+        usleep(1000);
+    }
+}
+
+void x_deinit()
+{
+    XCloseDisplay(display);
 }

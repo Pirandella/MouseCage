@@ -1,11 +1,25 @@
-#include <unistd.h>
+#include <signal.h>
 
 #include "arg_parser.h"
 #include "x.h"
 
+args *arg = NULL;
+
+void signal_handler(int sig)
+{
+    ap_deinit(arg);
+    x_deinit();
+
+    puts("\nMouse is free");
+
+    exit(0);
+}
+
 int main(int argc, char **argv)
 {
-    args *arg = ap_init(argc, argv);
+    signal(SIGINT, signal_handler);
+
+    arg = ap_init(argc, argv);
 
     x_init();
 
@@ -14,14 +28,13 @@ int main(int argc, char **argv)
     } else if (arg->flags & ARG_APP_NAME) {
         x_select_window_by_name(arg->app_name);
     } else if (arg->flags & ARG_APP_CURSOR) {
-        printf("App under the cursor.\n");
         x_select_window_under_cursor();
     } else {
-        printf("Cursor position:\n");
         x_live_cursor_position();
     }
     
-    ap_deinit(arg);
+    x_track_cursor();
+
     return 0;
 }
 
